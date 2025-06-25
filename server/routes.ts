@@ -211,7 +211,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const faceMatchScore = calculateFaceMatchScore();
       
       // Determine verification results
-      const identityVerified = faceMatchScore >= 75; // 75% threshold
+      const identityVerified = faceMatchScore >= 65; // 65% threshold
       const ageVerified = verification.extractedAge !== null && verification.extractedAge >= 18;
 
       // Update verification record
