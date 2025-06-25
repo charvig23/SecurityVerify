@@ -1,16 +1,48 @@
 # Zynga SecurityVerify
+A React + Vite application for seamless document and identity verification.
 
-A React + Vite app for document and identity verification.
-
----
-
-## 🚀 Getting Started
-
-### 1. Clone the Repository
-
-```bash
+# 🚀 Getting Started
+## Clone the repository
 git clone https://github.com/your-username/your-repo-name.git
 cd your-repo-name/SecurityVerify
+
+## Install dependencies
+npm install
+
+## Start the development server
+npm run dev
+
+The app will be available at http://localhost:5173 (or the port shown in your terminal).
+
+# 🛠️ Troubleshooting
+## PowerShell Script Error (Windows):
+If you get a script execution error, run this in PowerShell:
+Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
+
+## PDF Dependencies:
+If you encounter errors about jspdf or html2canvas, install them using:
+npm install jspdf html2canvas
+
+# 📁 Project Structure
+client/src/components/verification-results.tsx – Main verification results component
+client/src/components/quality-feedback.tsx – Feedback display component
+client/src/components/ui/ – Reusable UI components (Button, Card, etc.)
+
+# 📋 Notes
+Requires Node.js and npm installed on your system
+
+If the app integrates with a backend API, make sure the API server is running
+
+You can also mock API endpoints during local development
+
+# ✨ Features
+Upload identity documents and selfie
+
+Automatic identity, age, and face match verification
+
+Generate and download a PDF report
+
+Display quality feedback and verification results
 
 
 # 📷 Aadhar-Based ID Verification App
