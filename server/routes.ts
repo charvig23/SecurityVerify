@@ -403,7 +403,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const ageEstimation = await estimateAgeFromFace(verification.selfiePath);
       
       // Determine verification results with confidence scoring
-      const identityVerified = faceAnalysis.score >= 65 && faceAnalysis.confidence >= 70;
+      const identityVerified = faceAnalysis.score >= 50 && faceAnalysis.confidence >= 60;
       
       // Use estimated age if available and confident, otherwise fall back to extracted age
       const finalAge = (ageEstimation.age !== null && ageEstimation.confidence >= 60) 

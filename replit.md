@@ -105,7 +105,7 @@ Recent Changes:
   - Added sophisticated face comparison using image statistics and color analysis
   - Integrated facial feature-based age estimation with quality metrics
   - Enhanced UI to display confidence levels for all verification components
-  - Face match threshold set to 65% with confidence requirements
+  - Face match threshold set to 50% with confidence requirements
   - All processing includes detailed confidence scoring for transparency
 - June 25, 2025: Initial system setup with basic verification workflow
 ```
