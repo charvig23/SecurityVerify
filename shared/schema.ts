@@ -15,7 +15,6 @@ export const verificationRecords = pgTable("verification_records", {
   extractedName: text("extracted_name"),
   extractedAge: integer("extracted_age"),
   extractedDob: text("extracted_dob"),
-  selfieEstimatedAge: integer("selfie_estimated_age"), // Age estimated from selfie
   faceMatchScore: integer("face_match_score"), // 0-100
   ageVerified: boolean("age_verified").default(false),
   identityVerified: boolean("identity_verified").default(false),
