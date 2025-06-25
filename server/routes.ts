@@ -108,48 +108,6 @@ function extractInfoFromText(text: string): { text: string; name?: string; age?:
   return { text, name, age, dob };
 }
 
-// Age detection using MagicAPI
-async function estimateAgeFromImage(imagePath: string): Promise<number | null> {
-  try {
-    // Read image file and convert to base64
-    const imageBuffer = fs.readFileSync(imagePath);
-    const base64Image = imageBuffer.toString('base64');
-    
-    const response = await fetch('https://api.magicapi.dev/api/v1/magicapi/age-detector/', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-magicapi-key': 'cmcc2xj9r0005jy04on4n8q7n'
-      },
-      body: JSON.stringify({
-        image: `data:image/jpeg;base64,${base64Image}`
-      })
-    });
-    
-    if (!response.ok) {
-      console.error('Age detection API error:', response.statusText);
-      return null;
-    }
-    
-    const result = await response.json();
-    
-    // Extract age from response (adjust based on actual API response format)
-    if (result && result.age !== undefined) {
-      return Math.round(result.age);
-    } else if (result && result.estimated_age !== undefined) {
-      return Math.round(result.estimated_age);
-    } else if (result && result.data && result.data.age !== undefined) {
-      return Math.round(result.data.age);
-    }
-    
-    console.error('Unexpected age detection response format:', result);
-    return null;
-  } catch (error) {
-    console.error('Error estimating age from image:', error);
-    return null;
-  }
-}
-
 // Simple face comparison (mock implementation - in real app would use face-api.js)
 function calculateFaceMatchScore(): number {
   // Mock implementation - returns random score between 70-95
@@ -252,24 +210,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Calculate face match score (mock implementation)
       const faceMatchScore = calculateFaceMatchScore();
       
-      // Estimate age from selfie
-      const selfieEstimatedAge = await estimateAgeFromImage(verification.selfiePath);
-      
       // Determine verification results
       const identityVerified = faceMatchScore >= 65; // 65% threshold
-      
-      // Age verification now considers both OCR age and selfie estimated age
-      let ageVerified = false;
-      if (verification.extractedAge !== null && verification.extractedAge >= 18) {
-        ageVerified = true;
-      } else if (selfieEstimatedAge !== null && selfieEstimatedAge >= 18) {
-        ageVerified = true;
-      }
+      const ageVerified = verification.extractedAge !== null && verification.extractedAge >= 18;
 
       // Update verification record
       const updatedVerification = await storage.updateVerificationRecord(parseInt(verificationId), {
         faceMatchScore,
-        selfieEstimatedAge,
         identityVerified,
         ageVerified,
         status: 'completed',
@@ -283,7 +230,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ageVerified,
           faceMatchScore,
           extractedAge: verification.extractedAge,
-          selfieEstimatedAge,
           extractedName: verification.extractedName,
         }
       });
