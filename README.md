@@ -1,3 +1,18 @@
+# Zynga SecurityVerify
+
+A React + Vite app for document and identity verification.
+
+---
+
+## 🚀 Getting Started
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/your-username/your-repo-name.git
+cd your-repo-name/SecurityVerify
+
+
 # 📷 Aadhar-Based ID Verification App
 
 A web-based system to verify if an uploaded Aadhar document and a live selfie belong to the same person, and if they meet an age requirement (e.g., 18+).
