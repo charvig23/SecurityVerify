@@ -54,6 +54,8 @@ export class MemStorage implements IStorage {
       faceConfidence: record.faceConfidence || null,
       ageConfidence: record.ageConfidence || null,
       ocrConfidence: record.ocrConfidence || null,
+      ocrLanguage: record.ocrLanguage || null,
+      qualityFeedback: record.qualityFeedback || null,
       ageVerified: record.ageVerified || false,
       identityVerified: record.identityVerified || false,
       status: record.status || 'pending',

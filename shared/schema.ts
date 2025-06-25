@@ -20,6 +20,8 @@ export const verificationRecords = pgTable("verification_records", {
   faceConfidence: integer("face_confidence"), // Confidence in face match
   ageConfidence: integer("age_confidence"), // Confidence in age estimation
   ocrConfidence: integer("ocr_confidence"), // Confidence in OCR extraction
+  ocrLanguage: text("ocr_language"), // Detected language
+  qualityFeedback: text("quality_feedback"), // JSON string of feedback
   ageVerified: boolean("age_verified").default(false),
   identityVerified: boolean("identity_verified").default(false),
   status: text("status").notNull().default("pending"), // pending, processing, completed, failed
