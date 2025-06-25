@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle2, XCircle, Award, Download, RefreshCw } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import QualityFeedback from "./quality-feedback";
 
 interface VerificationResultsProps {
   verificationId: number;
@@ -193,13 +194,26 @@ export default function VerificationResults({ verificationId }: VerificationResu
                 <div>
                   <h4 className="font-medium text-gray-900">Identity Verification</h4>
                   <p className="text-sm text-gray-600">
-                    Face match: {verificationRecord.faceMatchScore}% 
+                    <span className="font-semibold text-lg">
+                      {verificationRecord.faceMatchScore}% match
+                    </span>
                     {verificationRecord.faceConfidence && (
-                      <span className="text-gray-500">
+                      <span className="text-gray-500 ml-2">
                         (confidence: {verificationRecord.faceConfidence}%)
                       </span>
                     )}
                   </p>
+                  {verificationRecord.faceMatchScore && (
+                    <div className="mt-2 bg-gray-200 rounded-full h-2">
+                      <div 
+                        className={`h-2 rounded-full ${
+                          verificationRecord.faceMatchScore >= 70 ? 'bg-green-500' :
+                          verificationRecord.faceMatchScore >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+                        }`}
+                        style={{ width: `${Math.min(100, verificationRecord.faceMatchScore)}%` }}
+                      ></div>
+                    </div>
+                  )}
                 </div>
               </div>
               <span className={`px-3 py-1 rounded-full text-sm font-medium ${
@@ -227,16 +241,31 @@ export default function VerificationResults({ verificationId }: VerificationResu
                   <h4 className="font-medium text-gray-900">Age Verification</h4>
                   <p className="text-sm text-gray-600">
                     {verificationRecord.detectedAge 
-                      ? `Detected Age: ${verificationRecord.detectedAge} years (from selfie)` 
+                      ? (
+                        <span>
+                          Detected Age: <span className="font-semibold text-lg">{verificationRecord.detectedAge} years</span> (from selfie)
+                          {verificationRecord.ageConfidence && (
+                            <span className="text-gray-500 ml-2">
+                              (confidence: {verificationRecord.ageConfidence}%)
+                            </span>
+                          )}
+                        </span>
+                      )
                       : verificationRecord.extractedAge 
                         ? `Document Age: ${verificationRecord.extractedAge} years` 
                         : 'Age not detected'}
-                    {verificationRecord.ageConfidence && verificationRecord.detectedAge && (
-                      <span className="text-gray-500">
-                        (confidence: {verificationRecord.ageConfidence}%)
-                      </span>
-                    )}
                   </p>
+                  {verificationRecord.ageConfidence && (
+                    <div className="mt-2 bg-gray-200 rounded-full h-2">
+                      <div 
+                        className={`h-2 rounded-full ${
+                          verificationRecord.ageConfidence >= 80 ? 'bg-green-500' :
+                          verificationRecord.ageConfidence >= 60 ? 'bg-yellow-500' : 'bg-red-500'
+                        }`}
+                        style={{ width: `${Math.min(100, verificationRecord.ageConfidence)}%` }}
+                      ></div>
+                    </div>
+                  )}
                 </div>
               </div>
               <span className={`px-3 py-1 rounded-full text-sm font-medium ${
@@ -288,16 +317,38 @@ export default function VerificationResults({ verificationId }: VerificationResu
                 </div>
               )}
               {verificationRecord.faceMatchScore && (
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Face Match Score:</span>
+                    <span className="font-medium text-lg">
+                      {verificationRecord.faceMatchScore}%
+                      {verificationRecord.faceConfidence && (
+                        <span className="text-sm text-gray-500 ml-1">
+                          ({verificationRecord.faceConfidence}% confidence)
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                  <div className="bg-gray-200 rounded-full h-3">
+                    <div 
+                      className={`h-3 rounded-full transition-all duration-300 ${
+                        verificationRecord.faceMatchScore >= 70 ? 'bg-green-500' :
+                        verificationRecord.faceMatchScore >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+                      }`}
+                      style={{ width: `${Math.min(100, verificationRecord.faceMatchScore)}%` }}
+                    ></div>
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {verificationRecord.faceMatchScore >= 70 ? 'Excellent match' :
+                     verificationRecord.faceMatchScore >= 50 ? 'Good match' : 'Poor match'}
+                  </div>
+                </div>
+              )}
+              
+              {verificationRecord.ocrLanguage && (
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Face Match Score:</span>
-                  <span className="font-medium">
-                    {verificationRecord.faceMatchScore}%
-                    {verificationRecord.faceConfidence && (
-                      <span className="text-sm text-gray-500 ml-1">
-                        ({verificationRecord.faceConfidence}% confidence)
-                      </span>
-                    )}
-                  </span>
+                  <span className="text-gray-600">Document Language:</span>
+                  <span className="font-medium">{verificationRecord.ocrLanguage}</span>
                 </div>
               )}
               {verificationRecord.extractedDob && (
@@ -360,6 +411,11 @@ export default function VerificationResults({ verificationId }: VerificationResu
           Start New Verification
         </Button>
       </div>
+      
+      {/* Quality Feedback Component */}
+      {data.results?.feedback && (
+        <QualityFeedback feedback={data.results.feedback} />
+      )}
     </div>
   );
 }

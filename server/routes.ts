@@ -7,6 +7,7 @@ import fs from "fs";
 import { createWorker } from "tesseract.js";
 import sharp from "sharp";
 import { insertVerificationSchema } from "@shared/schema";
+import { uploadRateLimit, verificationRateLimit, validateUploadedFile, anonymizeForLogging } from "./security";
 // Face analysis libraries - simplified approach for better reliability
 
 // Configure multer for file uploads
@@ -25,9 +26,12 @@ const upload = multer({
   }
 });
 
-// Enhanced OCR processing with multiple preprocessing techniques
-async function processOCR(imagePath: string): Promise<{ text: string; name?: string; age?: number; dob?: string; confidence: number }> {
-  const worker = await createWorker('eng');
+// Enhanced OCR processing with multiple languages and preprocessing techniques
+async function processOCR(imagePath: string): Promise<{ text: string; name?: string; age?: number; dob?: string; confidence: number; language?: string }> {
+  // Initialize workers for multiple languages
+  const englishWorker = await createWorker('eng');
+  const hindiWorker = await createWorker('hin');
+  const teluguWorker = await createWorker('tel');
   
   try {
     // Multiple preprocessing approaches for better OCR accuracy
@@ -52,13 +56,26 @@ async function processOCR(imagePath: string): Promise<{ text: string; name?: str
       .jpeg({ quality: 95 })
       .toFile(processedImagePath2);
 
-    // Try both methods and combine results
-    const { data: result1 } = await worker.recognize(processedImagePath1);
-    const { data: result2 } = await worker.recognize(processedImagePath2);
+    // Try multiple languages and preprocessing methods
+    const results = await Promise.all([
+      englishWorker.recognize(processedImagePath1),
+      englishWorker.recognize(processedImagePath2),
+      hindiWorker.recognize(processedImagePath1),
+      teluguWorker.recognize(processedImagePath1)
+    ]);
     
-    // Use the result with higher confidence
-    const useResult1 = result1.confidence > result2.confidence;
-    const bestResult = useResult1 ? result1 : result2;
+    // Find the result with highest confidence
+    let bestResult = results[0].data;
+    let bestLanguage = 'English';
+    
+    results.forEach((result, index) => {
+      if (result.data.confidence > bestResult.confidence) {
+        bestResult = result.data;
+        bestLanguage = index === 0 || index === 1 ? 'English' : 
+                     index === 2 ? 'Hindi' : 'Telugu';
+      }
+    });
+    
     const text = bestResult.text;
     
     // Clean up processed images
@@ -70,10 +87,13 @@ async function processOCR(imagePath: string): Promise<{ text: string; name?: str
     
     return {
       ...extractedInfo,
-      confidence: Math.round(bestResult.confidence)
+      confidence: Math.round(bestResult.confidence),
+      language: bestLanguage
     };
   } finally {
-    await worker.terminate();
+    await englishWorker.terminate();
+    await hindiWorker.terminate();
+    await teluguWorker.terminate();
   }
 }
 
@@ -155,8 +175,98 @@ async function initializeImageAnalysis() {
   }
 }
 
+// Image quality assessment for feedback
+async function assessImageQuality(imagePath: string): Promise<{ 
+  quality: 'excellent' | 'good' | 'poor' | 'very_poor';
+  issues: string[];
+  score: number;
+  feedback: string[];
+}> {
+  try {
+    const imageBuffer = fs.readFileSync(imagePath);
+    const [metadata, stats] = await Promise.all([
+      sharp(imageBuffer).metadata(),
+      sharp(imageBuffer).stats()
+    ]);
+    
+    const issues: string[] = [];
+    const feedback: string[] = [];
+    let qualityScore = 100;
+    
+    // Check resolution
+    const width = metadata.width || 0;
+    const height = metadata.height || 0;
+    const pixelCount = width * height;
+    
+    if (pixelCount < 200000) {
+      issues.push('low_resolution');
+      feedback.push('Image resolution is too low. Please use a higher quality camera or move closer.');
+      qualityScore -= 30;
+    } else if (pixelCount < 500000) {
+      issues.push('moderate_resolution');
+      feedback.push('Image could be clearer. Try moving closer or using better lighting.');
+      qualityScore -= 15;
+    }
+    
+    // Check brightness
+    const channels = stats.channels || [];
+    if (channels.length >= 3) {
+      const avgBrightness = (channels[0].mean + channels[1].mean + channels[2].mean) / 3;
+      
+      if (avgBrightness < 80) {
+        issues.push('too_dark');
+        feedback.push('Image is too dark. Please improve lighting or move to a brighter area.');
+        qualityScore -= 25;
+      } else if (avgBrightness > 200) {
+        issues.push('too_bright');
+        feedback.push('Image is too bright. Reduce direct lighting or move away from bright sources.');
+        qualityScore -= 20;
+      }
+      
+      // Check for blur using standard deviation
+      const textureVariation = Math.max(
+        channels[0].stdev || 0,
+        channels[1].stdev || 0,
+        channels[2].stdev || 0
+      );
+      
+      if (textureVariation < 30) {
+        issues.push('blurry');
+        feedback.push('Image appears blurry. Hold the camera steady and ensure proper focus.');
+        qualityScore -= 35;
+      } else if (textureVariation < 50) {
+        issues.push('slightly_blurry');
+        feedback.push('Image could be sharper. Try holding the camera more steady.');
+        qualityScore -= 15;
+      }
+    }
+    
+    // Determine overall quality
+    let quality: 'excellent' | 'good' | 'poor' | 'very_poor';
+    if (qualityScore >= 85) quality = 'excellent';
+    else if (qualityScore >= 70) quality = 'good';
+    else if (qualityScore >= 50) quality = 'poor';
+    else quality = 'very_poor';
+    
+    return {
+      quality,
+      issues,
+      score: Math.max(0, qualityScore),
+      feedback
+    };
+  } catch (error) {
+    console.error('Error assessing image quality:', error);
+    return {
+      quality: 'poor',
+      issues: ['processing_error'],
+      score: 50,
+      feedback: ['Unable to assess image quality. Please try again.']
+    };
+  }
+}
+
 // Enhanced face comparison using advanced computer vision analysis
-async function calculateAdvancedFaceMatch(documentPath: string, selfiePath: string): Promise<{ score: number; confidence: number }> {
+async function calculateAdvancedFaceMatch(documentPath: string, selfiePath: string): Promise<{ score: number; confidence: number; feedback: string[] }> {
   try {
     await initializeImageAnalysis();
     
@@ -214,21 +324,53 @@ async function calculateAdvancedFaceMatch(documentPath: string, selfiePath: stri
     if (avgQuality > 500000) confidence += 10;
     if (documentMeta.channels === 3 && selfieMeta.channels === 3) confidence += 5;
     
+    // Assess image quality and provide feedback
+    const [docQualityResult, selfieQualityResult] = await Promise.all([
+      assessImageQuality(documentPath),
+      assessImageQuality(selfiePath)
+    ]);
+    
+    const feedback: string[] = [];
+    
+    if (docQualityResult.quality === 'poor' || docQualityResult.quality === 'very_poor') {
+      feedback.push('Document image quality is poor. Please upload a clearer photo.');
+      confidence -= 15;
+    }
+    
+    if (selfieQualityResult.quality === 'poor' || selfieQualityResult.quality === 'very_poor') {
+      feedback.push('Selfie quality is poor. Please retake with better lighting and focus.');
+      confidence -= 15;
+    }
+    
+    if (selfieQualityResult.issues.includes('blurry')) {
+      feedback.push('Selfie appears blurry. Hold camera steady and ensure proper focus.');
+    }
+    
+    if (selfieQualityResult.issues.includes('too_dark')) {
+      feedback.push('Selfie is too dark. Move to better lighting or increase brightness.');
+    }
+    
+    if (selfieQualityResult.issues.includes('too_bright')) {
+      feedback.push('Selfie is overexposed. Reduce lighting or move away from bright sources.');
+    }
+    
     return {
       score: Math.round(similarityScore),
-      confidence: Math.round(confidence)
+      confidence: Math.round(Math.max(30, confidence)),
+      feedback
     };
   } catch (error) {
     console.error('Error in advanced face comparison:', error);
     return {
       score: Math.floor(Math.random() * 25) + 45,
-      confidence: 50
+      confidence: 50,
+      feedback: ['Error during face comparison. Please try again.']
     };
   }
 }
 
 // Advanced age estimation using facial feature analysis
-async function estimateAgeFromFace(imagePath: string): Promise<{ age: number | null; confidence: number }> {
+async function estimateAgeFromFace(imagePath: string): Promise<{ age: number | null; confidence: number; feedback: string[] }> {
   try {
     await initializeImageAnalysis();
     
@@ -283,15 +425,30 @@ async function estimateAgeFromFace(imagePath: string): Promise<{ age: number | n
     const qualityScore = Math.min(imageArea / 500000, 1);
     confidence = Math.min(90, confidence * (0.7 + qualityScore * 0.3));
     
+    // Assess image quality for age estimation
+    const imageQuality = await assessImageQuality(imagePath);
+    const feedback: string[] = [];
+    
+    if (imageQuality.quality === 'poor' || imageQuality.quality === 'very_poor') {
+      feedback.push('Image quality affects age estimation accuracy. Please use better lighting.');
+      confidence -= 20;
+    }
+    
+    if (imageQuality.issues.includes('blurry')) {
+      feedback.push('Blurry image reduces age estimation confidence.');
+    }
+    
     return {
       age: Math.round(estimatedAge),
-      confidence: Math.round(confidence)
+      confidence: Math.round(Math.max(0, confidence)),
+      feedback
     };
   } catch (error) {
     console.error('Error in advanced age estimation:', error);
     return {
       age: null,
-      confidence: 0
+      confidence: 0,
+      feedback: ['Error during age estimation. Please try again.']
     };
   }
 }
@@ -299,10 +456,12 @@ async function estimateAgeFromFace(imagePath: string): Promise<{ age: number | n
 export async function registerRoutes(app: Express): Promise<Server> {
   
   // Upload document endpoint
-  app.post('/api/upload-document', upload.single('document'), async (req, res) => {
+  app.post('/api/upload-document', uploadRateLimit, upload.single('document'), async (req, res) => {
     try {
-      if (!req.file) {
-        return res.status(400).json({ message: 'No file uploaded' });
+      // Validate uploaded file
+      const fileValidation = validateUploadedFile(req.file);
+      if (!req.file || !fileValidation.isValid) {
+        return res.status(400).json({ message: fileValidation.error || 'No file uploaded' });
       }
 
       // Process OCR
@@ -319,6 +478,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         faceConfidence: null,
         ageConfidence: null,
         ocrConfidence: ocrResult.confidence,
+        ocrLanguage: ocrResult.language,
+        qualityFeedback: null,
         ageVerified: false,
         identityVerified: false,
         status: 'document_processed',
@@ -344,10 +505,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Upload selfie endpoint
-  app.post('/api/upload-selfie', upload.single('selfie'), async (req, res) => {
+  app.post('/api/upload-selfie', uploadRateLimit, upload.single('selfie'), async (req, res) => {
     try {
-      if (!req.file) {
-        return res.status(400).json({ message: 'No selfie uploaded' });
+      // Validate uploaded file
+      const fileValidation = validateUploadedFile(req.file);
+      if (!req.file || !fileValidation.isValid) {
+        return res.status(400).json({ message: fileValidation.error || 'No selfie uploaded' });
       }
 
       const { verificationId } = req.body;
@@ -374,8 +537,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Process verification endpoint
-  app.post('/api/process-verification', async (req, res) => {
+  // Process verification endpoint with security
+  app.post('/api/process-verification', verificationRateLimit, async (req, res) => {
     try {
       const { verificationId } = req.body;
       if (!verificationId) {
@@ -411,11 +574,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         : verification.extractedAge;
       const ageVerified = finalAge !== null && finalAge >= 18;
 
-      // Update verification record with all confidence scores
+      // Compile all feedback for storage
+      const allFeedback = {
+        face: faceAnalysis.feedback || [],
+        age: ageEstimation.feedback || [],
+        scores: {
+          faceMatch: faceAnalysis.score,
+          faceConfidence: faceAnalysis.confidence,
+          ageConfidence: ageEstimation.confidence
+        }
+      };
+
+      // Update verification record with all confidence scores and feedback
       const updatedVerification = await storage.updateVerificationRecord(parseInt(verificationId), {
         faceMatchScore: faceAnalysis.score,
         faceConfidence: faceAnalysis.confidence,
         ageConfidence: ageEstimation.confidence,
+        qualityFeedback: JSON.stringify(allFeedback),
         identityVerified,
         ageVerified,
         detectedAge: ageEstimation.age,
@@ -435,6 +610,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ageConfidence: ageEstimation.confidence,
           extractedName: verification.extractedName,
           finalAge: finalAge,
+          feedback: {
+            face: faceAnalysis.feedback || [],
+            age: ageEstimation.feedback || [],
+            overall: [
+              `Identity verification: ${faceAnalysis.score}% match (${faceAnalysis.confidence}% confidence)`,
+              `Age estimation: ${ageEstimation.age} years (${ageEstimation.confidence}% confidence)`,
+              identityVerified ? 'Identity verification passed' : 'Identity verification failed - score below 50%',
+              ageVerified ? 'Age verification passed - 18 or older' : 'Age verification failed - under 18'
+            ]
+          }
         }
       });
 
