@@ -48,6 +48,7 @@ export class MemStorage implements IStorage {
       id,
       extractedName: record.extractedName || null,
       extractedAge: record.extractedAge || null,
+      detectedAge: record.detectedAge || null,
       extractedDob: record.extractedDob || null,
       faceMatchScore: record.faceMatchScore || null,
       ageVerified: record.ageVerified || false,

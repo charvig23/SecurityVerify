@@ -115,6 +115,47 @@ function calculateFaceMatchScore(): number {
   return Math.floor(Math.random() * 25) + 70;
 }
 
+// Age detection using MagicAPI
+async function detectAgeFromSelfie(imagePath: string): Promise<number | null> {
+  try {
+    const imageBuffer = fs.readFileSync(imagePath);
+    const base64Image = imageBuffer.toString('base64');
+    
+    const response = await fetch('https://api.market/store/magicapi/age-detector', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer cmcc2xj9r0005jy04on4n8q7n'
+      },
+      body: JSON.stringify({
+        image: base64Image
+      })
+    });
+
+    if (!response.ok) {
+      console.error('Age detection API failed:', response.status, response.statusText);
+      return null;
+    }
+
+    const result = await response.json();
+    
+    // Extract age from API response (adjust based on actual API response format)
+    if (result && result.age && typeof result.age === 'number') {
+      return Math.round(result.age);
+    } else if (result && result.data && result.data.age) {
+      return Math.round(result.data.age);
+    } else if (result && Array.isArray(result) && result.length > 0 && result[0].age) {
+      return Math.round(result[0].age);
+    }
+    
+    console.error('Unexpected age detection API response format:', result);
+    return null;
+  } catch (error) {
+    console.error('Error calling age detection API:', error);
+    return null;
+  }
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   
   // Upload document endpoint
@@ -207,18 +248,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Selfie not uploaded' });
       }
 
+      // Set status to processing
+      await storage.updateVerificationRecord(parseInt(verificationId), {
+        status: 'processing',
+      });
+
       // Calculate face match score (mock implementation)
       const faceMatchScore = calculateFaceMatchScore();
       
+      // Detect age from selfie using MagicAPI
+      const detectedAge = await detectAgeFromSelfie(verification.selfiePath);
+      
       // Determine verification results
       const identityVerified = faceMatchScore >= 65; // 65% threshold
-      const ageVerified = verification.extractedAge !== null && verification.extractedAge >= 18;
+      
+      // Use detected age if available, otherwise fall back to extracted age from document
+      const finalAge = detectedAge !== null ? detectedAge : verification.extractedAge;
+      const ageVerified = finalAge !== null && finalAge >= 18;
 
       // Update verification record
       const updatedVerification = await storage.updateVerificationRecord(parseInt(verificationId), {
         faceMatchScore,
         identityVerified,
         ageVerified,
+        detectedAge: detectedAge, // Store detected age from MagicAPI
         status: 'completed',
         completedAt: new Date(),
       });
@@ -229,7 +282,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           identityVerified,
           ageVerified,
           faceMatchScore,
-          extractedAge: verification.extractedAge,
+          extractedAge: finalAge,
+          detectedAge: detectedAge, // Include detected age in response
           extractedName: verification.extractedName,
         }
       });

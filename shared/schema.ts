@@ -14,6 +14,7 @@ export const verificationRecords = pgTable("verification_records", {
   selfiePath: text("selfie_path").notNull(),
   extractedName: text("extracted_name"),
   extractedAge: integer("extracted_age"),
+  detectedAge: integer("detected_age"), // Age detected from selfie using MagicAPI
   extractedDob: text("extracted_dob"),
   faceMatchScore: integer("face_match_score"), // 0-100
   ageVerified: boolean("age_verified").default(false),
