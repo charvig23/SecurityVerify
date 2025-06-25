@@ -213,7 +213,9 @@ export default function VerificationResults({ verificationId }: VerificationResu
                 <div>
                   <h4 className="font-medium text-gray-900">Age Verification</h4>
                   <p className="text-sm text-gray-600">
-                    {verificationRecord.extractedAge ? `Age: ${verificationRecord.extractedAge} years` : 'Age not detected'}
+                    {verificationRecord.extractedAge && `ID: ${verificationRecord.extractedAge} years`}
+                    {verificationRecord.selfieEstimatedAge && (verificationRecord.extractedAge ? `, Selfie: ${verificationRecord.selfieEstimatedAge} years` : `Selfie: ${verificationRecord.selfieEstimatedAge} years`)}
+                    {!verificationRecord.extractedAge && !verificationRecord.selfieEstimatedAge && 'Age not detected'}
                   </p>
                 </div>
               </div>
@@ -241,8 +243,14 @@ export default function VerificationResults({ verificationId }: VerificationResu
               )}
               {verificationRecord.extractedAge && (
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Age:</span>
+                  <span className="text-gray-600">Age (from ID):</span>
                   <span className="font-medium">{verificationRecord.extractedAge} years</span>
+                </div>
+              )}
+              {verificationRecord.selfieEstimatedAge && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Age (from selfie):</span>
+                  <span className="font-medium">{verificationRecord.selfieEstimatedAge} years</span>
                 </div>
               )}
               {verificationRecord.extractedDob && (
