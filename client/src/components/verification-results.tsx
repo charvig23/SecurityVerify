@@ -5,15 +5,36 @@ import { CheckCircle2, XCircle, Award, Download, RefreshCw } from "lucide-react"
 import { useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import QualityFeedback from "./quality-feedback";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 
 interface VerificationResultsProps {
   verificationId: number;
 }
 
+interface VerificationRecord {
+  status: string;
+  identityVerified: boolean;
+  ageVerified: boolean;
+  faceMatchScore?: number;
+  faceConfidence?: number;
+  detectedAge?: number;
+  ageConfidence?: number;
+  extractedAge?: number;
+  ocrConfidence?: number;
+  extractedName?: string;
+  extractedDob?: string;
+  ocrLanguage?: string;
+  completedAt?: string;
+  results?: {
+    feedback?: any;
+  };
+}
+
 export default function VerificationResults({ verificationId }: VerificationResultsProps) {
   const { toast } = useToast();
 
-  const { data: verificationRecord, isLoading } = useQuery({
+  const { data: verificationRecord, isLoading } = useQuery<VerificationRecord>({
     queryKey: [`/api/verification/${verificationId}`],
     refetchInterval: 2000, // Poll every 2 seconds until completed
     refetchIntervalInBackground: false,
@@ -52,6 +73,20 @@ export default function VerificationResults({ verificationId }: VerificationResu
 
   const startVerification = () => {
     processVerificationMutation.mutate();
+  };
+
+  const handleDownloadPDF = async () => {
+    const element = document.querySelector(".verification-step.active");
+    if (!element) return;
+    const canvas = await html2canvas(element as HTMLElement);
+    const imgData = canvas.toDataURL("image/png");
+    const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const imgWidth = pageWidth - 40;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    pdf.addImage(imgData, "PNG", 20, 20, imgWidth, imgHeight, undefined, "FAST");
+    pdf.save("verification-results.pdf");
   };
 
   if (isLoading) {
@@ -240,29 +275,20 @@ export default function VerificationResults({ verificationId }: VerificationResu
                 <div>
                   <h4 className="font-medium text-gray-900">Age Verification</h4>
                   <p className="text-sm text-gray-600">
-                    {verificationRecord.detectedAge 
-                      ? (
-                        <span>
-                          Detected Age: <span className="font-semibold text-lg">{verificationRecord.detectedAge} years</span> (from selfie)
-                          {verificationRecord.ageConfidence && (
-                            <span className="text-gray-500 ml-2">
-                              (confidence: {verificationRecord.ageConfidence}%)
-                            </span>
-                          )}
-                        </span>
-                      )
-                      : verificationRecord.extractedAge 
-                        ? `Document Age: ${verificationRecord.extractedAge} years` 
-                        : 'Age not detected'}
+                    {verificationRecord.detectedAge} years
+                    {verificationRecord.ageConfidence && (
+                      <span className="text-gray-500 ml-2">
+                        (confidence: {verificationRecord.ageConfidence}%)
+                      </span>
+                    )}
                   </p>
-                  {verificationRecord.ageConfidence && (
+                  {verificationRecord.detectedAge && (
                     <div className="mt-2 bg-gray-200 rounded-full h-2">
                       <div 
                         className={`h-2 rounded-full ${
-                          verificationRecord.ageConfidence >= 80 ? 'bg-green-500' :
-                          verificationRecord.ageConfidence >= 60 ? 'bg-yellow-500' : 'bg-red-500'
+                          verificationRecord.detectedAge >= 18 ? 'bg-green-500' : 'bg-red-500'
                         }`}
-                        style={{ width: `${Math.min(100, verificationRecord.ageConfidence)}%` }}
+                        style={{ width: `${Math.min(100, verificationRecord.detectedAge)}%` }}
                       ></div>
                     </div>
                   )}
@@ -273,149 +299,27 @@ export default function VerificationResults({ verificationId }: VerificationResu
                   ? 'bg-green-100 text-green-800' 
                   : 'bg-red-100 text-red-800'
               }`}>
-                {verificationRecord.ageVerified ? '18+ Verified' : 'Under 18'}
+                {verificationRecord.ageVerified ? 'Verified' : 'Failed'}
               </span>
             </div>
           </CardContent>
         </Card>
 
-        {/* Extracted Information */}
-        <Card>
-          <CardContent className="pt-4">
-            <h4 className="font-medium text-gray-900 mb-3">Extracted Information</h4>
-            <div className="space-y-2 text-sm">
-              {verificationRecord.extractedName && (
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Name:</span>
-                  <span className="font-medium">{verificationRecord.extractedName}</span>
-                </div>
-              )}
-              {verificationRecord.detectedAge && (
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Detected Age (Selfie):</span>
-                  <span className="font-medium">
-                    {verificationRecord.detectedAge} years
-                    {verificationRecord.ageConfidence && (
-                      <span className="text-sm text-gray-500 ml-1">
-                        ({verificationRecord.ageConfidence}% confidence)
-                      </span>
-                    )}
-                  </span>
-                </div>
-              )}
-              {verificationRecord.extractedAge && (
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Document Age:</span>
-                  <span className="font-medium">
-                    {verificationRecord.extractedAge} years
-                    {verificationRecord.ocrConfidence && (
-                      <span className="text-sm text-gray-500 ml-1">
-                        ({verificationRecord.ocrConfidence}% OCR confidence)
-                      </span>
-                    )}
-                  </span>
-                </div>
-              )}
-              {verificationRecord.faceMatchScore && (
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Face Match Score:</span>
-                    <span className="font-medium text-lg">
-                      {verificationRecord.faceMatchScore}%
-                      {verificationRecord.faceConfidence && (
-                        <span className="text-sm text-gray-500 ml-1">
-                          ({verificationRecord.faceConfidence}% confidence)
-                        </span>
-                      )}
-                    </span>
-                  </div>
-                  <div className="bg-gray-200 rounded-full h-3">
-                    <div 
-                      className={`h-3 rounded-full transition-all duration-300 ${
-                        verificationRecord.faceMatchScore >= 70 ? 'bg-green-500' :
-                        verificationRecord.faceMatchScore >= 50 ? 'bg-yellow-500' : 'bg-red-500'
-                      }`}
-                      style={{ width: `${Math.min(100, verificationRecord.faceMatchScore)}%` }}
-                    ></div>
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    {verificationRecord.faceMatchScore >= 70 ? 'Excellent match' :
-                     verificationRecord.faceMatchScore >= 50 ? 'Good match' : 'Poor match'}
-                  </div>
-                </div>
-              )}
-              
-              {verificationRecord.ocrLanguage && (
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Document Language:</span>
-                  <span className="font-medium">{verificationRecord.ocrLanguage}</span>
-                </div>
-              )}
-              {verificationRecord.extractedDob && (
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Date of Birth:</span>
-                  <span className="font-medium">{verificationRecord.extractedDob}</span>
-                </div>
-              )}
-              <div className="flex justify-between">
-                <span className="text-gray-600">Verification Date:</span>
-                <span className="font-medium">
-                  {new Date(verificationRecord.completedAt!).toLocaleDateString()}
-                </span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Overall Status */}
-      <div className={`text-center p-6 rounded-lg mb-6 ${
-        verificationRecord.identityVerified && verificationRecord.ageVerified
-          ? 'bg-green-50 border border-green-200'
-          : 'bg-red-50 border border-red-200'
-      }`}>
-        <div className="mb-4">
-          {verificationRecord.identityVerified && verificationRecord.ageVerified ? (
-            <Award className="text-success-green mx-auto" size={48} />
-          ) : (
-            <XCircle className="text-error-red mx-auto" size={48} />
-          )}
-        </div>
-        <h3 className={`text-xl font-semibold mb-2 ${
-          verificationRecord.identityVerified && verificationRecord.ageVerified
-            ? 'text-green-800'
-            : 'text-red-800'
-        }`}>
-          {verificationRecord.identityVerified && verificationRecord.ageVerified
-            ? 'Verification Successful'
-            : 'Verification Failed'
-          }
-        </h3>
-        <p className="text-gray-600">
-          {verificationRecord.identityVerified && verificationRecord.ageVerified
-            ? 'Your identity and age have been successfully verified.'
-            : 'We were unable to verify your identity or age. Please try again with clearer documents.'
-          }
-        </p>
-      </div>
-
-      {/* Action Buttons */}
-      <div className="flex justify-center space-x-4">
-        {verificationRecord.identityVerified && verificationRecord.ageVerified && (
-          <Button className="bg-primary-blue hover:bg-primary-blue-dark text-white px-6 py-2">
-            <Download size={16} className="mr-2" />
-            Download Certificate
-          </Button>
+        {/* Feedback */}
+        {verificationRecord.results?.feedback && (
+          <QualityFeedback feedback={verificationRecord.results.feedback} />
         )}
-        <Button variant="outline" onClick={() => window.location.reload()}>
-          Start New Verification
-        </Button>
+
+        <div className="flex justify-end mt-4">
+          <Button
+            onClick={handleDownloadPDF}
+            className="bg-primary-blue hover:bg-primary-blue-dark text-white px-8 py-3"
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Download PDF Report
+          </Button>
+        </div>
       </div>
-      
-      {/* Quality Feedback Component */}
-      {data.results?.feedback && (
-        <QualityFeedback feedback={data.results.feedback} />
-      )}
     </div>
   );
 }
