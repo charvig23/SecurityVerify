@@ -120,18 +120,26 @@ export default function Verification() {
               
               <p className="text-gray-600 mb-6">We'll compare your selfie with your ID photo and verify your age.</p>
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                 <div className="text-center p-4 bg-gray-50 rounded-lg">
                   <div className="text-2xl mb-2">🔍</div>
-                  <p className="text-sm text-gray-500">OCR Processing</p>
+                  <p className="text-sm text-gray-500">Enhanced OCR</p>
+                  <p className="text-xs text-gray-400">Tesseract + preprocessing</p>
                 </div>
                 <div className="text-center p-4 bg-gray-50 rounded-lg">
                   <div className="text-2xl mb-2">👤</div>
-                  <p className="text-sm text-gray-500">Facial Recognition</p>
+                  <p className="text-sm text-gray-500">Face Analysis</p>
+                  <p className="text-xs text-gray-400">Computer vision</p>
+                </div>
+                <div className="text-center p-4 bg-gray-50 rounded-lg">
+                  <div className="text-2xl mb-2">📊</div>
+                  <p className="text-sm text-gray-500">Confidence Scoring</p>
+                  <p className="text-xs text-gray-400">Quality metrics</p>
                 </div>
                 <div className="text-center p-4 bg-gray-50 rounded-lg">
                   <div className="text-2xl mb-2">📅</div>
-                  <p className="text-sm text-gray-500">Age Verification</p>
+                  <p className="text-sm text-gray-500">Age Detection</p>
+                  <p className="text-xs text-gray-400">Facial features</p>
                 </div>
               </div>
 

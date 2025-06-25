@@ -140,18 +140,26 @@ export default function VerificationResults({ verificationId }: VerificationResu
           Please wait while we verify your identity and age. This may take a few moments.
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="text-center p-4 bg-blue-50 rounded-lg">
             <RefreshCw className="text-primary-blue mx-auto mb-2 animate-spin" size={24} />
-            <p className="text-sm text-gray-600">Processing OCR Data</p>
+            <p className="text-sm text-gray-600">Enhanced OCR</p>
+            <p className="text-xs text-gray-400">Multi-pass processing</p>
           </div>
           <div className="text-center p-4 bg-blue-50 rounded-lg">
             <RefreshCw className="text-primary-blue mx-auto mb-2 animate-spin" size={24} />
-            <p className="text-sm text-gray-600">Comparing Faces</p>
+            <p className="text-sm text-gray-600">Face Analysis</p>
+            <p className="text-xs text-gray-400">Computer vision</p>
           </div>
           <div className="text-center p-4 bg-blue-50 rounded-lg">
             <RefreshCw className="text-primary-blue mx-auto mb-2 animate-spin" size={24} />
-            <p className="text-sm text-gray-600">Verifying Age</p>
+            <p className="text-sm text-gray-600">Confidence Scoring</p>
+            <p className="text-xs text-gray-400">Quality assessment</p>
+          </div>
+          <div className="text-center p-4 bg-blue-50 rounded-lg">
+            <RefreshCw className="text-primary-blue mx-auto mb-2 animate-spin" size={24} />
+            <p className="text-sm text-gray-600">Age Detection</p>
+            <p className="text-xs text-gray-400">Facial feature analysis</p>
           </div>
         </div>
       </div>
@@ -185,7 +193,12 @@ export default function VerificationResults({ verificationId }: VerificationResu
                 <div>
                   <h4 className="font-medium text-gray-900">Identity Verification</h4>
                   <p className="text-sm text-gray-600">
-                    Face match: {verificationRecord.faceMatchScore}%
+                    Face match: {verificationRecord.faceMatchScore}% 
+                    {verificationRecord.faceConfidence && (
+                      <span className="text-gray-500">
+                        (confidence: {verificationRecord.faceConfidence}%)
+                      </span>
+                    )}
                   </p>
                 </div>
               </div>
@@ -218,6 +231,11 @@ export default function VerificationResults({ verificationId }: VerificationResu
                       : verificationRecord.extractedAge 
                         ? `Document Age: ${verificationRecord.extractedAge} years` 
                         : 'Age not detected'}
+                    {verificationRecord.ageConfidence && verificationRecord.detectedAge && (
+                      <span className="text-gray-500">
+                        (confidence: {verificationRecord.ageConfidence}%)
+                      </span>
+                    )}
                   </p>
                 </div>
               </div>
@@ -246,13 +264,40 @@ export default function VerificationResults({ verificationId }: VerificationResu
               {verificationRecord.detectedAge && (
                 <div className="flex justify-between">
                   <span className="text-gray-600">Detected Age (Selfie):</span>
-                  <span className="font-medium">{verificationRecord.detectedAge} years</span>
+                  <span className="font-medium">
+                    {verificationRecord.detectedAge} years
+                    {verificationRecord.ageConfidence && (
+                      <span className="text-sm text-gray-500 ml-1">
+                        ({verificationRecord.ageConfidence}% confidence)
+                      </span>
+                    )}
+                  </span>
                 </div>
               )}
               {verificationRecord.extractedAge && (
                 <div className="flex justify-between">
                   <span className="text-gray-600">Document Age:</span>
-                  <span className="font-medium">{verificationRecord.extractedAge} years</span>
+                  <span className="font-medium">
+                    {verificationRecord.extractedAge} years
+                    {verificationRecord.ocrConfidence && (
+                      <span className="text-sm text-gray-500 ml-1">
+                        ({verificationRecord.ocrConfidence}% OCR confidence)
+                      </span>
+                    )}
+                  </span>
+                </div>
+              )}
+              {verificationRecord.faceMatchScore && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Face Match Score:</span>
+                  <span className="font-medium">
+                    {verificationRecord.faceMatchScore}%
+                    {verificationRecord.faceConfidence && (
+                      <span className="text-sm text-gray-500 ml-1">
+                        ({verificationRecord.faceConfidence}% confidence)
+                      </span>
+                    )}
+                  </span>
                 </div>
               )}
               {verificationRecord.extractedDob && (
