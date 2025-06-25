@@ -99,6 +99,11 @@ SecureVerify is a modern full-stack web application that provides secure age and
 ```
 Changelog:
 - June 25, 2025. Initial setup
+- June 25, 2025. Enhanced age verification with MagicAPI integration
+  - Added selfie age estimation using computer vision
+  - Dual age verification (ID OCR + selfie analysis)
+  - Face match threshold set to 65%
+  - Updated database schema with selfieEstimatedAge field
 ```
 
 ## User Preferences

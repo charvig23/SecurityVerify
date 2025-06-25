@@ -119,6 +119,7 @@ async function estimateAgeFromImage(imagePath: string): Promise<number | null> {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'x-magicapi-key': 'cmcc2xj9r0005jy04on4n8q7n'
       },
       body: JSON.stringify({
         image: `data:image/jpeg;base64,${base64Image}`
