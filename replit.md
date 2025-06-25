@@ -1,8 +1,8 @@
-# VeriSure - Identity Verification System
+# SecureVerify - Identity Verification System
 
 ## Overview
 
-VeriSure is a modern full-stack web application that provides secure age and identity verification using advanced AI-powered OCR (Optical Character Recognition) technology and facial recognition. The system features a user-friendly interface with engaging visual elements, allowing users to upload identification documents, capture selfies, and get verified through automated document processing and face matching with real-time feedback and detailed confidence scoring.
+SecureVerify is a modern full-stack web application that provides secure age and identity verification using OCR (Optical Character Recognition) technology and facial recognition. The system allows users to upload identification documents, capture selfies, and get verified through automated document processing and face matching.
 
 ## System Architecture
 
@@ -100,14 +100,6 @@ VeriSure is a modern full-stack web application that provides secure age and ide
 
 ```
 Recent Changes:
-- June 25, 2025: VeriSure brand redesign with modern, engaging UI
-  - Rebranded from SecureVerify to VeriSure with new visual identity
-  - Implemented modern gradient-based design with purple/cyan color scheme
-  - Added engaging visual elements including hover effects and animations
-  - Enhanced user experience with intuitive navigation and clear visual feedback
-  - Upgraded progress indicators with enhanced styling and transitions
-  - Improved document upload interface with better visual cues
-  - Added trust indicators and professional branding elements
 - June 25, 2025: Complete verification system with security and multi-language support
   - Added multi-language OCR support (English, Hindi, Telugu) for Indian documents
   - Implemented comprehensive security with rate limiting, input validation, and encryption
