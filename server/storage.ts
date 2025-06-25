@@ -46,6 +46,13 @@ export class MemStorage implements IStorage {
     const verification: VerificationRecord = {
       ...record,
       id,
+      extractedName: record.extractedName || null,
+      extractedAge: record.extractedAge || null,
+      extractedDob: record.extractedDob || null,
+      faceMatchScore: record.faceMatchScore || null,
+      ageVerified: record.ageVerified || false,
+      identityVerified: record.identityVerified || false,
+      status: record.status || 'pending',
       createdAt: new Date(),
       completedAt: null,
     };
