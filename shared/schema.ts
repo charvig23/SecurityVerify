@@ -14,9 +14,12 @@ export const verificationRecords = pgTable("verification_records", {
   selfiePath: text("selfie_path").notNull(),
   extractedName: text("extracted_name"),
   extractedAge: integer("extracted_age"),
-  detectedAge: integer("detected_age"), // Age detected from selfie using MagicAPI
+  detectedAge: integer("detected_age"), // Age estimated from facial features
   extractedDob: text("extracted_dob"),
   faceMatchScore: integer("face_match_score"), // 0-100
+  faceConfidence: integer("face_confidence"), // Confidence in face match
+  ageConfidence: integer("age_confidence"), // Confidence in age estimation
+  ocrConfidence: integer("ocr_confidence"), // Confidence in OCR extraction
   ageVerified: boolean("age_verified").default(false),
   identityVerified: boolean("identity_verified").default(false),
   status: text("status").notNull().default("pending"), // pending, processing, completed, failed
