@@ -16,7 +16,7 @@ The app will be available at http://localhost:5173 (or the port shown in your te
 
 # 🛠️ Troubleshooting
 ## PowerShell Script Error (Windows):
-If you get a script execution error, run this in PowerShell:
+If you get a script execution error, run this in PowerShell:/
 Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
 
 ## PDF Dependencies:
